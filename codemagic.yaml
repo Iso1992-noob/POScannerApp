@@ -4,20 +4,35 @@ workflows:
     max_build_duration: 30
     instance_type: mac_mini_m1
     environment:
-      ios_signing:
-        distribution_type: ad_hoc
-        bundle_identifier: com.scanner.poscannerapp
       xcode: latest
     scripts:
-      - name: Generate Xcode Project & Build IPA
+      - name: Generate Project and Build IPA
         script: |
-          # 1. Tạo file dự án xcodeproj chuẩn tự động
-          swift package init --type executable --name POScannerApp || true
-          
-          # 2. Biên dịch App Native iOS
+          # 1. Tạo file cấu trúc Xcode Project chuẩn
+          cat << 'EOF' > project.yml
+          name: POScannerApp
+          options:
+            bundlePrefix: com.scanner
+          targets:
+            POScannerApp:
+              type: application
+              platform: iOS
+              deploymentTarget: "15.0"
+              sources: [POScannerApp]
+              settings:
+                GENERATE_INFOPLIST_FILE: NO
+                INFOPLIST_FILE: POScannerApp/Info.plist
+                PRODUCT_BUNDLE_IDENTIFIER: com.scanner.poscannerapp
+          EOF
+
+          # 2. Cài đặt xcodegen để tự sinh .xcodeproj
+          brew install xcodegen
+          codegen generate
+
+          # 3. Biên dịch Release ứng dụng iOS
           xcodebuild build \
-            -project "POScannerApp.xcodeproj" \
-            -scheme "POScannerApp" \
+            -project POScannerApp.xcodeproj \
+            -scheme POScannerApp \
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGN_IDENTITY="" \
@@ -25,12 +40,13 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CONFIGURATION_BUILD_DIR=$CODEMAGIC_BUILD_DIR/build
 
-      - name: Package to IPA Artifact
+      - name: Package to IPA
         script: |
-          # 3. Đóng gói thành file IPA thành phẩm
+          # 4. Đóng gói Payload chuẩn file .ipa
           cd $CODEMAGIC_BUILD_DIR
           mkdir -p Payload
-          cp -R build/*.app Payload/ 2>/dev/null || cp -R build/Release-iphoneos/*.app Payload/
+          cp -R build/POScannerApp.app Payload/
           zip -r POScannerApp.ipa Payload
+
     artifacts:
-      - *.ipa
+      - "*.ipa"
