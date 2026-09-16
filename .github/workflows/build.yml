@@ -18,7 +18,7 @@ jobs:
 
     - name: Generate Project and Build IPA
       run: |
-        # 1. Tạo file dự án xcodegen chuẩn cấu trúc Apple Native
+        # Dùng XcodeGen để cấu hình Auto-generate Info.plist
         cat << 'EOF' > project.yml
         name: POScannerApp
         options:
@@ -34,20 +34,19 @@ jobs:
               - path: .
                 includes:
                   - "*.swift"
-                  - "Info.plist"
             settings:
               base:
-                GENERATE_INFOPLIST_FILE: NO
-                INFOPLIST_FILE: Info.plist
                 PRODUCT_BUNDLE_IDENTIFIER: com.scanner.poscannerapp
                 SWIFT_VERSION: "5.0"
                 IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+                # Bật tính năng tự động tạo file Info.plist chuẩn của Apple
+                GENERATE_INFOPLIST_FILE: YES
+                # Truyền quyền Camera trực tiếp vào file cấu hình
+                INFOPLIST_KEY_NSCameraUsageDescription: "Ứng dụng cần quyền camera để tự động nhận diện mã PO."
         EOF
 
-        # 2. Sinh xcodeproj
         xcodegen generate
 
-        # 3. Biên dịch Release với Code Signing bị vô hiệu hóa để tạo IPA Unsigned
         xcodebuild build \
           -project POScannerApp.xcodeproj \
           -scheme POScannerApp \
