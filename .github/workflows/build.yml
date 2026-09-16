@@ -1,0 +1,59 @@
+name: Build Native iOS App IPA
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install XcodeGen
+      run: brew install xcodegen
+
+    - name: Generate Project and Build IPA
+      run: |
+        cat << 'EOF' > project.yml
+        name: POScannerApp
+        options:
+          bundlePrefix: com.scanner
+        targets:
+          POScannerApp:
+            type: application
+            platform: iOS
+            deploymentTarget: "15.0"
+            sources: [.]
+            settings:
+              GENERATE_INFOPLIST_FILE: NO
+              INFOPLIST_FILE: Info.plist
+              PRODUCT_BUNDLE_IDENTIFIER: com.scanner.poscannerapp
+        EOF
+
+        xcodegen generate
+
+        xcodebuild build \
+          -project POScannerApp.xcodeproj \
+          -scheme POScannerApp \
+          -sdk iphoneos \
+          -configuration Release \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          CONFIGURATION_BUILD_DIR=${{ github.workspace }}/build
+
+    - name: Package to IPA
+      run: |
+        mkdir -p Payload
+        cp -R build/POScannerApp.app Payload/
+        zip -r POScannerApp.ipa Payload
+
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: POScannerApp-IPA
+        path: POScannerApp.ipa
