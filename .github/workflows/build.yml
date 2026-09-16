@@ -18,24 +18,36 @@ jobs:
 
     - name: Generate Project and Build IPA
       run: |
+        # 1. Tạo file dự án xcodegen chuẩn cấu trúc Apple Native
         cat << 'EOF' > project.yml
         name: POScannerApp
         options:
           bundlePrefix: com.scanner
+          deploymentTarget:
+            iOS: "16.0"
         targets:
           POScannerApp:
             type: application
             platform: iOS
-            deploymentTarget: "15.0"
-            sources: [.]
+            deploymentTarget: "16.0"
+            sources:
+              - path: .
+                includes:
+                  - "*.swift"
+                  - "Info.plist"
             settings:
-              GENERATE_INFOPLIST_FILE: NO
-              INFOPLIST_FILE: Info.plist
-              PRODUCT_BUNDLE_IDENTIFIER: com.scanner.poscannerapp
+              base:
+                GENERATE_INFOPLIST_FILE: NO
+                INFOPLIST_FILE: Info.plist
+                PRODUCT_BUNDLE_IDENTIFIER: com.scanner.poscannerapp
+                SWIFT_VERSION: "5.0"
+                IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         EOF
 
+        # 2. Sinh xcodeproj
         xcodegen generate
 
+        # 3. Biên dịch Release với Code Signing bị vô hiệu hóa để tạo IPA Unsigned
         xcodebuild build \
           -project POScannerApp.xcodeproj \
           -scheme POScannerApp \
